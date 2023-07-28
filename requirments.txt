@@ -1,0 +1,5 @@
+python-dotenv
+tkinter
+pillow
+discord.py
+requests
