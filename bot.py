@@ -24,9 +24,15 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 bot.remove_command('help')
-VALID_LIMITS = [4, 6, 8, 10, 12, 20, 100]
+VALID_LIMITS = [2, 4, 6, 8, 10, 12, 20, 100]
 @bot.command()
 async def roll(ctx, dice_string: str, gui: str = None):
+    # Check if the command is used in the allowed channel
+    allowed_channel_id = 1134406011122360360
+    if ctx.channel.id != allowed_channel_id:
+        await ctx.send("Ошибка: Эта команда может быть использована только в канале #🎲〢дайсница")
+        return
+
     try:
         num_dice, limit = map(int, dice_string.lower().split('d'))
     except ValueError:
@@ -34,7 +40,7 @@ async def roll(ctx, dice_string: str, gui: str = None):
         return
 
     if num_dice < 1 or num_dice > 20 or limit not in VALID_LIMITS:
-        await ctx.send("Пожалуйста, укажите значение от 1 до 20 для количества кубиков и один из следующих кубов: d4, d6, d8, d10, d12, d20, d100.")
+        await ctx.send("Пожалуйста, укажите значение от 1 до 20 для количества кубиков и один из следующих кубов: d2, d4, d6, d8, d10, d12, d20, d100.")
         return
 
     results = []
@@ -69,16 +75,12 @@ async def roll(ctx, dice_string: str, gui: str = None):
             os.remove(temp_image_path)
     
     await ctx.send(result_str)
+
 @bot.command()  
 async def check(ctx, ch):
     # Убедимся, что входная характеристика находится в списке доступных характеристик
     valid_characteristics = [
-        'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
-        'save_strength', 'save_dexterity', 'save_constitution', 'save_intelligence',
-        'save_wisdom', 'save_charisma', 'acrobatics', 'investigation', 'athletics',
-        'perception', 'survival', 'performance', 'intimidation', 'history', 'sleight_of_hand',
-        'arcana', 'medicine', 'deception', 'nature', 'insight', 'religion', 'stealth',
-        'persuasion', 'animal_handling', 'hp_dice_current', 'armor_class', 'speed', 'initiative'
+        'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma','armor_class', 'speed', 'initiative'
     ]
     
     ch = ch.lower()  # Приведем характеристику к нижнему регистру (для регистронезависимости)
@@ -158,7 +160,7 @@ async def help(ctx):
         `!profile` - позволяет увидеть профиль игрока\n
         `!spell [Название заклинания]` - Позволяет увидеть карточку заклинания. Например - **!spell Огненный шар**\n
         `!equipment [название-предмета]` - Позволяет подробнее узнать о предмете. Например - **!equipment leather-armor**\n
-        `!newprofile [ссылка на pastebin.com]`- Создает профиль игрока. Работает от платформы LongStory. Например: **!newprofile https://pastebin.com/rUhR5ur0**. \nP.S.Если не будут заполнены выжные поля - Профиль не будет создан.\n
+        `!newprofile [ссылка на pastebin.com]`- Создает профиль игрока. Работает от платформы LongStory (https://longstoryshort.app/characters/builder/). Например: **!newprofile https://pastebin.com/rUhR5ur0**. \nP.S.Если не будут заполнены выжные поля - Профиль не будет создан.\n
         `!cost [Имя предмета]`- Позволяет узнать стоимость магических предметов (источник предметов https://dnd.su/). Например - **!cost Амулет инсомнии**
         """, color=discord.Color.red()))
 @bot.command()
@@ -206,43 +208,41 @@ async def cost(ctx, *, item):
         rarity = c.findAll('span', class_='list-icon__quality')
         for t, r in zip(title, rarity):
             if t.text.lower() == str(item).lower():
-                link = f"https://dnd.su{c.get('href')}"
+                newlink = f"https://dnd.su{c.get('href')}"
                 rar = str(r['title']).lower()
                 print(t.text," - ", r['title'])
-                break
+                # await ctx.send(f"{t.text} - {r['title']}")     
     link = "https://dnd.su/homebrew/items/"
     response = requests.get(link)
     soup = bs(response.text, "html.parser")
     cell = soup.findAll('a', class_="list-item-wrapper")
-    rar = ""
-    link = ""
     for c in cell:
         title = c.findAll("div", class_="list-item-title")
         rarity = c.findAll('span', class_='list-icon__quality')
         for t, r in zip(title, rarity):
             if t.text.lower() == str(item).lower():
-                link = f"https://dnd.su{c.get('href')}"
+                newlink = f"https://dnd.su{c.get('href')}"
                 rar = str(r['title']).lower()
                 print(t.text," - ", r['title']) 
-                break           
-    # print(rar)
-    if str(rar).lower() == 'обычный':
-        embed = discord.Embed(title="Обычный предмет", url = link, description = f"Стоимость: {random.randint(50,100)} зм", color=discord.Color.light_grey())
+                # await ctx.send(f"{t.text} - {r['title']}")
+    print(rar)                       
+    if str(rar).lower() in ('обычное', 'обычный'):
+        embed = discord.Embed(title="Обычный предмет", url = newlink, description = f"Стоимость: {random.randint(50,100)} зм", color=discord.Color.light_grey())
         await ctx.send(embed = embed)
-    elif str(rar).lower() == 'необычный':
-        embed = discord.Embed(title="Необычный предмет", url = link, description = f"Стоимость: {random.randint(101,500)} зм", color=discord.Color.green())
+    elif str(rar).lower() in ('необычное', 'необычный'):
+        embed = discord.Embed(title="Необычный предмет", url = newlink, description = f"Стоимость: {random.randint(101,500)} зм", color=discord.Color.green())
         await ctx.send(embed = embed)
-    elif str(rar).lower() == 'редкое':
-        embed = discord.Embed(title="Редкий предмет", url = link, description = f"Стоимость: {random.randint(501,5000)} зм", color=discord.Color.blue())
+    elif str(rar).lower() in ('редкое', 'редкий'):
+        embed = discord.Embed(title="Редкий предмет", url = newlink, description = f"Стоимость: {random.randint(501,5000)} зм", color=discord.Color.blue())
         await ctx.send(embed = embed)
-    elif str(rar).lower() == 'очень редкий':
-        embed = discord.Embed(title="Очень редкий предмет", url = link, description = f"Стоимость: {random.randint(5001,50000)} зм", color=discord.Color.purple())
+    elif str(rar).lower() in ('очень редкое', 'очень редкий'):
+        embed = discord.Embed(title="Очень редкий предмет", url = newlink, description = f"Стоимость: {random.randint(5001,50000)} зм", color=discord.Color.purple())
         await ctx.send(embed = embed)
-    elif str(rar).lower() == 'легендарный':
-        embed = discord.Embed(title="Легендарный предмет", url = link, description = f"Стоимость: {random.randint(50001,300000)} зм", color=discord.Color.gold())
+    elif str(rar).lower() in ('легендарное', 'легендарный'):
+        embed = discord.Embed(title="Легендарный предмет", url = newlink, description = f"Стоимость: {random.randint(50001,300000)} зм", color=discord.Color.gold())
         await ctx.send(embed = embed)
     elif str(rar).lower() == 'артефакт':
-        embed = discord.Embed(title="Артефакт", url = link, description = f"Стоимость уточняйте у DM", color=discord.Color.red())
+        embed = discord.Embed(title="Артефакт", url = newlink, description = f"Стоимость уточняйте у DM", color=discord.Color.red())
         await ctx.send(embed = embed)                             
     else:
         await ctx.send("Предмет не найден")
@@ -262,4 +262,47 @@ async def on_ready():
         members += 1
     await bot.change_presence(status = discord.Status.online, activity = discord.Activity(name = f'за {members} участниками', type = discord.ActivityType.watching)) #Общее количество участников, за которыми следит бот (Находятся на серверах)
     await asyncio.sleep(15)
+
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    ERROR_CHANNEL_ID = "1134402259241943040"
+    if isinstance(error, commands.CommandNotFound):
+        return
+
+    error_embed = discord.Embed(title="Произошла ошибка", color=discord.Color.red())
+    error_embed.add_field(name="Ошибка", value=f"```{error}```")
+    channel = bot.get_channel(ERROR_CHANNEL_ID)
+    if channel:
+        await channel.send(embed=error_embed)
+def read_update_file():
+    update_embed = discord.Embed(title="Обновление бота", description="", color=discord.Color.red())
+    try:
+        with open("update.md", "r", encoding="utf-8") as file:
+            update_number = file.readline().strip()
+            update_embed.title = f"Обновление {update_number}"
+            update_embed.description = file.read()
+    except FileNotFoundError:
+        update_embed.description = "Файл обновления не найден."
+    return update_embed
+
+@bot.event
+async def on_ready():
+    CHANNEL_ID = 1136188782736052304
+    already_sent_updates = set()
+    if os.path.exists("update_sent.txt"):
+        with open("update_sent.txt", "r") as f:
+            for line in f:
+                already_sent_updates.add(line.strip())
+    update_embed = read_update_file()
+    update_number = update_embed.title.replace("Обновление ", "")
+    if update_number not in already_sent_updates:
+        channel = bot.get_channel(CHANNEL_ID)
+        await channel.send(embed=update_embed)
+        with open("update_sent.txt", "a") as f:
+            f.write(update_number + "\n")
+
+
+
 bot.run('')
